@@ -310,6 +310,7 @@ namespace ThemeBot
                                 lu = GetLocalUser(m.From.Id);
                                 Client.SendTextMessageAsync(m.From.Id,
                                     "Great! You want to upload a new theme.  Let's begin.\nFirst, what is the name of your theme?");
+                                lu.ThemeCreating = new Theme();
                                 lu.QuestionAsked = QuestionType.ThemeName;
                             }
                             break;
@@ -428,7 +429,7 @@ namespace ThemeBot
                             if (m.Text.Length >= 3)
                             {
                                 if (lu.ThemeCreating != null)
-                                    lu.ThemeCreating = new Theme {Name = m.Text};
+                                    lu.ThemeCreating.Name = m.Text;
                                 else
                                     lu.ThemeUpdating.Name = m.Text;
                                 lu.QuestionAsked = QuestionType.Description;
