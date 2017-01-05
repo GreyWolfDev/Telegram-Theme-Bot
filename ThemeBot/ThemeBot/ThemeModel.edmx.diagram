@@ -11,6 +11,9 @@
         <AssociationConnector Association="tdthemeModel.FK_Rating_Theme" ManuallyRouted="false" />
         <AssociationConnector Association="tdthemeModel.FK_Theme_User" ManuallyRouted="false" />
         <AssociationConnector Association="tdthemeModel.FK_Rating_User" ManuallyRouted="false" />
+        <EntityTypeShape EntityType="tdthemeModel.Download" Width="1.5" PointX="5.25" PointY="4.625" />
+        <AssociationConnector Association="tdthemeModel.FK_Download_Theme" />
+        <AssociationConnector Association="tdthemeModel.FK_Download_User" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

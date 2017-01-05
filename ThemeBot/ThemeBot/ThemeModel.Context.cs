@@ -29,5 +29,6 @@ namespace ThemeBot
         public virtual DbSet<Theme> Themes { get; set; }
         public virtual DbSet<User> Users { get; set; }
         public virtual DbSet<Rating> Ratings { get; set; }
+        public virtual DbSet<Download> Downloads { get; set; }
     }
 }

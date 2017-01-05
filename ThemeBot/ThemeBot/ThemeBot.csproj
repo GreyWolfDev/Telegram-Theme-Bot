@@ -82,6 +82,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Download.cs">
+      <DependentUpon>ThemeModel.tt</DependentUpon>
+    </Compile>
     <Compile Include="LUser.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

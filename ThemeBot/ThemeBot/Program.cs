@@ -42,14 +42,7 @@ namespace ThemeBot
 
         private static void ClientOnOnInlineResultChosen(object sender, ChosenInlineResultEventArgs chosenInlineResultEventArgs)
         {
-            var q = chosenInlineResultEventArgs.ChosenInlineResult;
-            using (var db = new tdthemeEntities())
-            {
-                var t = db.Themes.FirstOrDefault(x => x.Id.ToString() == q.ResultId);
-                if (t == null) return;
-                t.TimesChosen++;
-                db.SaveChanges();
-            }
+
         }
 
         private static void ClientOnOnInlineQuery(object sender, InlineQueryEventArgs inlineQueryEventArgs)
@@ -109,125 +102,159 @@ namespace ThemeBot
 
         private static void ClientOnOnCallbackQuery(object sender, CallbackQueryEventArgs callbackQueryEventArgs)
         {
-            var q = callbackQueryEventArgs.CallbackQuery;
-            var lu = GetLocalUser(q.From.Id);
-            Theme t;
-            if (lu.QuestionAsked == QuestionType.ShowOwnerName && q.Data.StartsWith("showname"))
+            try
             {
-                if (lu.ThemeCreating != null)
+                var q = callbackQueryEventArgs.CallbackQuery;
+                var lu = GetLocalUser(q.From.Id);
+                Theme t;
+                if (lu.QuestionAsked == QuestionType.ShowOwnerName && q.Data.StartsWith("showname"))
                 {
-                    lu.ThemeCreating.ShowOwnerName = q.Data.Split('|')[1] == "yes";
-                    if (lu.ThemeCreating.ShowOwnerName & !String.IsNullOrEmpty(q.From.Username))
+                    if (lu.ThemeCreating != null)
                     {
-                        lu.QuestionAsked = QuestionType.ShowOwnerUsername;
-                        Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0, default(CancellationToken));
-                        Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
-                            $"Ok, do you also want us to show your username? (@{q.From.Username})", replyMarkup:
-                            new InlineKeyboardMarkup(new[]
-                            {
-                                new InlineKeyboardButton("Yes", "showuser|yes"),
-                                new InlineKeyboardButton("No", "showuser|no")
-                            }));
-                    }
-                    else
-                    {
-                        Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0, default(CancellationToken));
-                        Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
-                            "Ok, give me just a moment to upload your file...", replyMarkup: null);
-                        lu.ThemeCreating.ShowOwnerUsername = false;
-                        SaveTheme(lu);
-                    }
-                }
-                else
-                {
-                    lu.ThemeUpdating.ShowOwnerName = q.Data.Split('|')[1] == "yes";
-                    if (lu.ThemeUpdating.ShowOwnerName & !String.IsNullOrEmpty(q.From.Username))
-                    {
-                        lu.QuestionAsked = QuestionType.ShowOwnerUsername;
-                        Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0, default(CancellationToken));
-                        Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
-                            $"Ok, do you also want us to show your username? (@{q.From.Username})", replyMarkup:
-                            new InlineKeyboardMarkup(new[]
-                            {
-                                new InlineKeyboardButton("Yes", "showuser|yes"),
-                                new InlineKeyboardButton("No", "showuser|no")
-                            }));
-                    }
-                    else
-                    {
-                        Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0, default(CancellationToken));
-                        Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
-                            "Ok, give me just a moment to upload your file...", replyMarkup: null);
-                        lu.ThemeUpdating.ShowOwnerUsername = false;
-                        SaveTheme(lu, true);
-                    }
-
-                }
-                return;
-            }
-            if (lu.QuestionAsked == QuestionType.ShowOwnerUsername && q.Data.StartsWith("showuser"))
-            {
-                if (lu.ThemeCreating != null)
-                    lu.ThemeCreating.ShowOwnerUsername = q.Data.Split('|')[1] == "yes";
-                else
-                    lu.ThemeUpdating.ShowOwnerUsername = q.Data.Split('|')[1] == "yes";
-                Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0, default(CancellationToken));
-                Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
-                    "Ok, give me just a moment to upload your file...", replyMarkup: null);
-                SaveTheme(lu, lu.ThemeCreating == null);
-                return;
-            }
-            var args = q.Data.Split('|');
-            switch (args[0])
-            {
-                case "update":
-                    using (var db = new tdthemeEntities())
-                    {
-                        t = db.Themes.Find(int.Parse(args[1]));
-                        lu.ThemeUpdating = t;
-                        //do newtheme tasks
-                        lu.QuestionAsked = QuestionType.ThemeName;
-                        Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
-                        Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
-                            "Updating theme.  Please enter a new name, or hit /keep to keep the same name:\n" + t.Name);
-                    }
-                    break;
-                case "delete":
-                    using (var db = new tdthemeEntities())
-                    {
-                        t = db.Themes.Find(int.Parse(args[1]));
-                        Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
-                        Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
-                            $"Are you sure you want to delete {t.Name}?", replyMarkup:
-                            new InlineKeyboardMarkup(new[]
-                            {
-                                new InlineKeyboardButton("Yes", $"confirm|{args[1]}"),
-                                new InlineKeyboardButton("Cancel", "confirm|no")
-                            }));
-                    }
-                    break;
-                case "confirm":
-                    if (args[1] != "no")
-                    {
-                        using (var db = new tdthemeEntities())
+                        lu.ThemeCreating.ShowOwnerName = q.Data.Split('|')[1] == "yes";
+                        if (lu.ThemeCreating.ShowOwnerName & !String.IsNullOrEmpty(q.From.Username))
                         {
-                            t = db.Themes.Find(int.Parse(args[1]));
-                            db.Themes.Remove(t);
-                            db.SaveChanges();
-                            Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
-                            Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId, $"{t.Name} has been deleted.");
+                            lu.QuestionAsked = QuestionType.ShowOwnerUsername;
+                            Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0, default(CancellationToken));
+                            Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
+                                $"Ok, do you also want us to show your username? (@{q.From.Username})", replyMarkup:
+                                    new InlineKeyboardMarkup(new[]
+                                    {
+                                        new InlineKeyboardButton("Yes", "showuser|yes"),
+                                        new InlineKeyboardButton("No", "showuser|no")
+                                    }));
+                        }
+                        else
+                        {
+                            Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0, default(CancellationToken));
+                            Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
+                                "Ok, give me just a moment to upload your file...", replyMarkup: null);
+                            lu.ThemeCreating.ShowOwnerUsername = false;
+                            SaveTheme(lu);
                         }
                     }
                     else
                     {
-                        Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
-                        Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId, "Cancelled delete operation");
+                        lu.ThemeUpdating.ShowOwnerName = q.Data.Split('|')[1] == "yes";
+                        if (lu.ThemeUpdating.ShowOwnerName & !String.IsNullOrEmpty(q.From.Username))
+                        {
+                            lu.QuestionAsked = QuestionType.ShowOwnerUsername;
+                            Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0, default(CancellationToken));
+                            Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
+                                $"Ok, do you also want us to show your username? (@{q.From.Username})", replyMarkup:
+                                    new InlineKeyboardMarkup(new[]
+                                    {
+                                        new InlineKeyboardButton("Yes", "showuser|yes"),
+                                        new InlineKeyboardButton("No", "showuser|no")
+                                    }));
+                        }
+                        else
+                        {
+                            Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0, default(CancellationToken));
+                            Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
+                                "Ok, give me just a moment to upload your file...", replyMarkup: null);
+                            lu.ThemeUpdating.ShowOwnerUsername = false;
+                            SaveTheme(lu, true);
+                        }
+
                     }
-                    break;
+                    return;
+                }
+                if (lu.QuestionAsked == QuestionType.ShowOwnerUsername && q.Data.StartsWith("showuser"))
+                {
+                    if (lu.ThemeCreating != null)
+                        lu.ThemeCreating.ShowOwnerUsername = q.Data.Split('|')[1] == "yes";
+                    else
+                        lu.ThemeUpdating.ShowOwnerUsername = q.Data.Split('|')[1] == "yes";
+                    Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0, default(CancellationToken));
+                    Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
+                        "Ok, give me just a moment to upload your file...", replyMarkup: null);
+                    SaveTheme(lu, lu.ThemeCreating == null);
+                    return;
+                }
+                var args = q.Data.Split('|');
+                switch (args[0])
+                {
+                    case "update":
+                        using (var db = new tdthemeEntities())
+                        {
+                            t = db.Themes.Find(int.Parse(args[1]));
+                            lu.ThemeUpdating = t;
+                            //do newtheme tasks
+                            lu.QuestionAsked = QuestionType.ThemeName;
+                            Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
+                            Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
+                                "Updating theme.  Please enter a new name, or hit /keep to keep the same name:\n" +
+                                t.Name);
+                        }
+                        break;
+                    case "delete":
+                        using (var db = new tdthemeEntities())
+                        {
+                            t = db.Themes.Find(int.Parse(args[1]));
+                            Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
+                            Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
+                                $"Are you sure you want to delete {t.Name}?", replyMarkup:
+                                    new InlineKeyboardMarkup(new[]
+                                    {
+                                        new InlineKeyboardButton("Yes", $"confirm|{args[1]}"),
+                                        new InlineKeyboardButton("Cancel", "confirm|no")
+                                    }));
+                        }
+                        break;
+                    case "confirm":
+                        if (args[1] != "no")
+                        {
+                            using (var db = new tdthemeEntities())
+                            {
+                                t = db.Themes.Find(int.Parse(args[1]));
+                                db.Themes.Remove(t);
+                                db.SaveChanges();
+                                Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
+                                Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
+                                    $"{t.Name} has been deleted.");
+                            }
+                        }
+                        else
+                        {
+                            Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
+                            Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId, "Cancelled delete operation");
+                        }
+                        break;
+                    case "rate":
+                        Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
+                        if (args[1] == "no")
+                        {
+                            Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId, "Enjoy your theme!");
+                        }
+                        else
+                        {
+                            using (var db = new tdthemeEntities())
+                            {
+                                var rTheme = db.Themes.FirstOrDefault(x => x.Id.ToString() == args[1]);
+                                var rUser = db.Users.FirstOrDefault(x => x.TelegramID == q.From.Id);
+                                var r = new Rating
+                                {
+                                    ThemeId = rTheme.Id,
+                                    UserId = rUser.Id,
+                                    TimeStamp = DateTime.UtcNow,
+                                    Rating1 = int.Parse(args[2])
+                                };
+                                db.Ratings.Add(r);
+                                db.SaveChanges();
+                            }
+                            Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId, "Thank you for rating!");
+                        }
+
+                        break;
+                }
+
+
             }
-
-
-
+            catch (Exception e)
+            {
+                //TODO: add logging
+            }
         }
 
         private static void SaveTheme(LUser lu, bool update = false)
@@ -254,7 +281,7 @@ namespace ThemeBot
                     t.ShowOwnerUsername = th.ShowOwnerUsername;
                     db.SaveChanges();
                 }
-                
+
                 Client.SendTextMessageAsync(lu.Id, "Your theme is ready!");
                 LocalUsers.Remove(lu);
                 lu = null;
@@ -292,12 +319,24 @@ namespace ThemeBot
                                     using (var db = new tdthemeEntities())
                                     {
                                         var theme = db.Themes.FirstOrDefault(x => x.Id.ToString() == arg);
-                                        
-                                        if (theme.TimesChosen == null)
-                                            theme.TimesChosen = 0;
-                                        theme.TimesChosen++;
-                                        db.SaveChanges();
+                                        var dUser = db.Users.FirstOrDefault(x => x.TelegramID == m.From.Id);
+                                        if (theme != null && dUser != null)
+                                        {
+                                            theme.Downloads.Add(new Download
+                                            {
+                                                TimeStamp = DateTime.UtcNow,
+                                                UserID = dUser.Id
+                                            });
+                                            db.SaveChanges();
+                                        }
                                         Client.SendDocumentAsync(m.Chat.Id, new FileToSend(theme.File_Id), theme.Name);
+                                        Client.SendTextMessageAsync(m.From.Id, "Take a moment to rate this theme:", replyMarkup:
+                                            new InlineKeyboardMarkup(new[] {
+                                                Enumerable.Range(1, 5).Select(x => new InlineKeyboardButton(x.ToString(), $"rate|{theme.Id}|{x}")).ToArray(),
+                                                new []
+                                            {
+                                                new InlineKeyboardButton("No Thanks", "rate|no")
+                                            }, }));
                                     }
                                     break;
                                 }
@@ -377,7 +416,7 @@ namespace ThemeBot
                                         Client.SendTextMessageAsync(m.From.Id,
                                             "Which theme do you want to delete?",
                                             replyMarkup: new InlineKeyboardMarkup(
-                                                 usr.Themes.Select(x => new[] {new InlineKeyboardButton(x.Name, $"delete|{x.Id}")}).ToArray()
+                                                 usr.Themes.Select(x => new[] { new InlineKeyboardButton(x.Name, $"delete|{x.Id}") }).ToArray()
                                             ));
                                         break;
                                     }
