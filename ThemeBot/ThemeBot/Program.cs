@@ -43,7 +43,13 @@ namespace ThemeBot
         private static void ClientOnOnInlineResultChosen(object sender, ChosenInlineResultEventArgs chosenInlineResultEventArgs)
         {
             var q = chosenInlineResultEventArgs.ChosenInlineResult;
-
+            using (var db = new tdthemeEntities())
+            {
+                var t = db.Themes.FirstOrDefault(x => x.Id.ToString() == q.ResultId);
+                if (t == null) return;
+                t.TimesChosen++;
+                db.SaveChanges();
+            }
         }
 
         private static void ClientOnOnInlineQuery(object sender, InlineQueryEventArgs inlineQueryEventArgs)
@@ -76,6 +82,7 @@ namespace ThemeBot
                 lu.ResultSet.Skip(offset)
                     .Take(5)
                     .Select(
+#if !DEBUG
                         x => new InlineQueryResultCachedPhoto
                         {
                             Description = x.Description,
@@ -86,6 +93,16 @@ namespace ThemeBot
                             Title = x.Name,
                             ReplyMarkup = new InlineKeyboardMarkup(new[] { new InlineKeyboardButton("Get This Theme") { Url = "https://t.me/tthemebot?start=t" + x.Id }, })
                         }).ToArray();
+#else
+                    x => new InlineQueryResultArticle()
+                    {
+                        Description = x.Description,
+                        Id = x.Id.ToString(),
+                        InputMessageContent = new InputTextMessageContent { MessageText = $"{x.Name}\n{x.Description}" + (x.ShowOwnerName ? $"\nBy {x.User.Name}" + (x.ShowOwnerUsername ? $" (@{x.User.Username})" : "") : ""), DisableWebPagePreview = true },
+                        Title = x.Name,
+                        ReplyMarkup = new InlineKeyboardMarkup(new[] { new InlineKeyboardButton("Get This Theme") { Url = "https://t.me/tthemebot?start=t" + x.Id }, })
+                    }).ToArray();
+#endif
             offset += 5;
             var result = Client.AnswerInlineQueryAsync(q.Id, toSend, nextOffset: offset.ToString()).Result;
         }
@@ -275,6 +292,11 @@ namespace ThemeBot
                                     using (var db = new tdthemeEntities())
                                     {
                                         var theme = db.Themes.FirstOrDefault(x => x.Id.ToString() == arg);
+                                        
+                                        if (theme.TimesChosen == null)
+                                            theme.TimesChosen = 0;
+                                        theme.TimesChosen++;
+                                        db.SaveChanges();
                                         Client.SendDocumentAsync(m.Chat.Id, new FileToSend(theme.File_Id), theme.Name);
                                     }
                                     break;

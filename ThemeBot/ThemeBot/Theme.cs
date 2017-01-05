@@ -29,6 +29,7 @@ namespace ThemeBot
         public string FileName { get; set; }
         public string File_Id { get; set; }
         public string Photo_Id { get; set; }
+        public Nullable<int> TimesChosen { get; set; }
     
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<Rating> Ratings { get; set; }

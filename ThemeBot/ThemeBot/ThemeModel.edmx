@@ -30,6 +30,7 @@ warning 6002: The table/view 'tdtheme.dbo.Rating' does not have a primary key de
           <Property Name="FileName" Type="nvarchar(max)" Nullable="false" />
           <Property Name="File_Id" Type="nvarchar(max)" />
           <Property Name="Photo_Id" Type="nvarchar(max)" />
+          <Property Name="TimesChosen" Type="int" />
         </EntityType>
         <EntityType Name="User">
           <Key>
@@ -118,6 +119,7 @@ warning 6002: The table/view 'tdtheme.dbo.Rating' does not have a primary key de
           <Property Name="FileName" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
           <Property Name="File_Id" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
           <Property Name="Photo_Id" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="TimesChosen" Type="Int32" />
         </EntityType>
         <EntityType Name="User">
           <Key>
@@ -204,6 +206,7 @@ warning 6002: The table/view 'tdtheme.dbo.Rating' does not have a primary key de
           <EntitySetMapping Name="Themes">
             <EntityTypeMapping TypeName="tdthemeModel.Theme">
               <MappingFragment StoreEntitySet="Theme">
+                <ScalarProperty Name="TimesChosen" ColumnName="TimesChosen" />
                 <ScalarProperty Name="Photo_Id" ColumnName="Photo_Id" />
                 <ScalarProperty Name="File_Id" ColumnName="File_Id" />
                 <ScalarProperty Name="FileName" ColumnName="FileName" />
