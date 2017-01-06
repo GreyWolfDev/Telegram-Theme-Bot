@@ -38,6 +38,7 @@
           <Property Name="File_Id" Type="nvarchar(max)" />
           <Property Name="Photo_Id" Type="nvarchar(max)" />
           <Property Name="TimesChosen" Type="int" />
+          <Property Name="LastUpdated" Type="datetime" />
         </EntityType>
         <EntityType Name="User">
           <Key>
@@ -155,6 +156,7 @@
           <Property Name="Photo_Id" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
           <Property Name="TimesChosen" Type="Int32" />
           <NavigationProperty Name="Downloads" Relationship="tdthemeModel.FK_Download_Theme" FromRole="Theme" ToRole="Download" />
+          <Property Name="LastUpdated" Type="DateTime" Precision="3" />
         </EntityType>
         <EntityType Name="User">
           <Key>
@@ -286,6 +288,7 @@
           <EntitySetMapping Name="Themes">
             <EntityTypeMapping TypeName="tdthemeModel.Theme">
               <MappingFragment StoreEntitySet="Theme">
+                <ScalarProperty Name="LastUpdated" ColumnName="LastUpdated" />
                 <ScalarProperty Name="TimesChosen" ColumnName="TimesChosen" />
                 <ScalarProperty Name="Photo_Id" ColumnName="Photo_Id" />
                 <ScalarProperty Name="File_Id" ColumnName="File_Id" />

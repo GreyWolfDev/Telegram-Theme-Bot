@@ -265,6 +265,7 @@ namespace ThemeBot
                 {
                     //get the database user
                     var thisUser = db.Users.FirstOrDefault(x => x.TelegramID == lu.Id);
+                    lu.ThemeCreating.LastUpdated = DateTime.UtcNow;
                     thisUser.Themes.Add(lu.ThemeCreating);
                     db.SaveChanges();
                 }
@@ -279,6 +280,7 @@ namespace ThemeBot
                     t.Photo_Id = th.Photo_Id;
                     t.ShowOwnerName = th.ShowOwnerName;
                     t.ShowOwnerUsername = th.ShowOwnerUsername;
+                    t.LastUpdated = DateTime.UtcNow;
                     db.SaveChanges();
                 }
 
