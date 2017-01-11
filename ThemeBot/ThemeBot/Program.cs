@@ -58,7 +58,7 @@ namespace ThemeBot
                 lu.Page = 0;
                 using (var db = new tdthemeEntities())
                 {
-                    lu.ResultSet = db.Themes.Where(x => x.Description.ToLower().Contains(search) || x.Name.ToLower().Contains(search)).Include(x => x.User).ToList();
+                    lu.ResultSet = db.Themes.Where(x => x.Description.ToLower().Contains(search) || x.Name.ToLower().Contains(search) && x.Approved == true).Include(x => x.User).ToList();
                 }
                 if (!lu.ResultSet.Any())
                 {
@@ -286,9 +286,15 @@ namespace ThemeBot
                 {
                     //get the database user
                     var thisUser = db.Users.FirstOrDefault(x => x.TelegramID == lu.Id);
+                    lu.ThemeCreating.Approved = null;
                     lu.ThemeCreating.LastUpdated = DateTime.UtcNow;
                     thisUser.Themes.Add(lu.ThemeCreating);
                     db.SaveChanges();
+
+                    //theme is awaiting approval, PM Para
+                    Client.SendTextMessageAsync(129046388,
+                        $"New theme awaiting approval.\n{lu.ThemeCreating.Name}: {lu.ThemeCreating.LastUpdated}");
+                    Client.SendTextMessageAsync(lu.Id, "Your theme has been uploaded, and is awaiting approval from a moderator");
                 }
                 else
                 {
@@ -303,9 +309,10 @@ namespace ThemeBot
                     t.ShowOwnerUsername = th.ShowOwnerUsername;
                     t.LastUpdated = DateTime.UtcNow;
                     db.SaveChanges();
+                    Client.SendTextMessageAsync(lu.Id, "Your theme is ready!");
                 }
 
-                Client.SendTextMessageAsync(lu.Id, "Your theme is ready!");
+                
                 LocalUsers.Remove(lu);
                 lu = null;
             }
