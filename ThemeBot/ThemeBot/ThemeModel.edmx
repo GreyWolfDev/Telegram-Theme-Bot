@@ -148,13 +148,13 @@
           <Property Name="ShowOwnerName" Type="Boolean" Nullable="false" />
           <Property Name="ShowOwnerUsername" Type="Boolean" Nullable="false" />
           <Property Name="OwnerID" Type="Int32" Nullable="false" />
-          <NavigationProperty Name="Ratings" Relationship="Self.FK_Rating_Theme" FromRole="Theme" ToRole="Rating" />
           <NavigationProperty Name="User" Relationship="Self.FK_Theme_User" FromRole="Theme" ToRole="User" />
           <Property Name="FileName" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
           <Property Name="File_Id" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
           <Property Name="Photo_Id" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
           <Property Name="TimesChosen" Type="Int32" />
           <NavigationProperty Name="Downloads" Relationship="tdthemeModel.FK_Download_Theme" FromRole="Theme" ToRole="Download" />
+          <NavigationProperty Name="Ratings" Relationship="tdthemeModel.FK_Rating_Theme" FromRole="Theme" ToRole="Rating" />
         </EntityType>
         <EntityType Name="User">
           <Key>
@@ -165,33 +165,9 @@
           <Property Name="Name" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" Nullable="false" />
           <Property Name="Username" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
           <NavigationProperty Name="Themes" Relationship="Self.FK_Theme_User" FromRole="User" ToRole="Theme" />
-          <NavigationProperty Name="Ratings" Relationship="Self.FK_Rating_User" FromRole="User" ToRole="Rating" />
           <NavigationProperty Name="Downloads" Relationship="tdthemeModel.FK_Download_User" FromRole="User" ToRole="Download" />
+          <NavigationProperty Name="Ratings" Relationship="tdthemeModel.FK_Rating_User" FromRole="User" ToRole="Rating" />
         </EntityType>
-        <EntityType Name="Rating">
-          <Key>
-            <PropertyRef Name="Id" />
-          </Key>
-          <Property Name="ThemeId" Type="Int32" Nullable="false" />
-          <Property Name="UserId" Type="Int32" Nullable="false" />
-          <Property Name="Rating1" Type="Int32" Nullable="false" />
-          <NavigationProperty Name="Theme" Relationship="Self.FK_Rating_Theme" FromRole="Rating" ToRole="Theme" />
-          <NavigationProperty Name="User" Relationship="Self.FK_Rating_User" FromRole="Rating" ToRole="User" />
-          <Property Name="TimeStamp" Type="DateTime" Precision="3" />
-          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-        </EntityType>
-        <Association Name="FK_Rating_Theme">
-          <End Role="Theme" Type="Self.Theme" Multiplicity="1" />
-          <End Role="Rating" Type="Self.Rating" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="Theme">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="Rating">
-              <PropertyRef Name="ThemeId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
         <Association Name="FK_Theme_User">
           <End Role="User" Type="Self.User" Multiplicity="1" />
           <End Role="Theme" Type="Self.Theme" Multiplicity="*" />
@@ -204,33 +180,12 @@
             </Dependent>
           </ReferentialConstraint>
         </Association>
-        <Association Name="FK_Rating_User">
-          <End Role="User" Type="Self.User" Multiplicity="1" />
-          <End Role="Rating" Type="Self.Rating" Multiplicity="*" />
-          <ReferentialConstraint>
-            <Principal Role="User">
-              <PropertyRef Name="Id" />
-            </Principal>
-            <Dependent Role="Rating">
-              <PropertyRef Name="UserId" />
-            </Dependent>
-          </ReferentialConstraint>
-        </Association>
         <EntityContainer Name="tdthemeEntities" annotation:LazyLoadingEnabled="true">
           <EntitySet Name="Themes" EntityType="Self.Theme" />
           <EntitySet Name="Users" EntityType="Self.User" />
-          <EntitySet Name="Ratings" EntityType="Self.Rating" />
-          <AssociationSet Name="FK_Rating_Theme" Association="Self.FK_Rating_Theme">
-            <End Role="Theme" EntitySet="Themes" />
-            <End Role="Rating" EntitySet="Ratings" />
-          </AssociationSet>
           <AssociationSet Name="FK_Theme_User" Association="Self.FK_Theme_User">
             <End Role="User" EntitySet="Users" />
             <End Role="Theme" EntitySet="Themes" />
-          </AssociationSet>
-          <AssociationSet Name="FK_Rating_User" Association="Self.FK_Rating_User">
-            <End Role="User" EntitySet="Users" />
-            <End Role="Rating" EntitySet="Ratings" />
           </AssociationSet>
           <EntitySet Name="Downloads" EntityType="tdthemeModel.Download" />
           <AssociationSet Name="FK_Download_Theme" Association="tdthemeModel.FK_Download_Theme">
@@ -240,6 +195,15 @@
           <AssociationSet Name="FK_Download_User" Association="tdthemeModel.FK_Download_User">
             <End Role="User" EntitySet="Users" />
             <End Role="Download" EntitySet="Downloads" />
+          </AssociationSet>
+          <EntitySet Name="Ratings" EntityType="tdthemeModel.Rating" />
+          <AssociationSet Name="FK_Rating_Theme" Association="tdthemeModel.FK_Rating_Theme">
+            <End Role="Theme" EntitySet="Themes" />
+            <End Role="Rating" EntitySet="Ratings" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Rating_User" Association="tdthemeModel.FK_Rating_User">
+            <End Role="User" EntitySet="Users" />
+            <End Role="Rating" EntitySet="Ratings" />
           </AssociationSet>
         </EntityContainer>
         <EntityType Name="Download">
@@ -277,6 +241,42 @@
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <EntityType Name="Rating">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="ThemeId" Type="Int32" Nullable="false" />
+          <Property Name="UserId" Type="Int32" Nullable="false" />
+          <Property Name="Rating1" Type="Int32" Nullable="false" />
+          <Property Name="TimeStamp" Type="DateTime" Precision="3" />
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <NavigationProperty Name="Theme" Relationship="tdthemeModel.FK_Rating_Theme" FromRole="Rating" ToRole="Theme" />
+          <NavigationProperty Name="User" Relationship="tdthemeModel.FK_Rating_User" FromRole="Rating" ToRole="User" />
+        </EntityType>
+        <Association Name="FK_Rating_Theme">
+          <End Type="tdthemeModel.Theme" Role="Theme" Multiplicity="1" />
+          <End Type="tdthemeModel.Rating" Role="Rating" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Theme">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Rating">
+              <PropertyRef Name="ThemeId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Rating_User">
+          <End Type="tdthemeModel.User" Role="User" Multiplicity="1" />
+          <End Type="tdthemeModel.Rating" Role="Rating" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="User">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Rating">
+              <PropertyRef Name="UserId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
       </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
@@ -309,17 +309,6 @@
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>
-          <EntitySetMapping Name="Ratings">
-            <EntityTypeMapping TypeName="tdthemeModel.Rating">
-              <MappingFragment StoreEntitySet="Rating">
-                <ScalarProperty Name="Id" ColumnName="Id" />
-                <ScalarProperty Name="TimeStamp" ColumnName="TimeStamp" />
-                <ScalarProperty Name="ThemeId" ColumnName="ThemeId" />
-                <ScalarProperty Name="UserId" ColumnName="UserId" />
-                <ScalarProperty Name="Rating1" ColumnName="Rating" />
-              </MappingFragment>
-            </EntityTypeMapping>
-          </EntitySetMapping>
           <EntitySetMapping Name="Downloads">
             <EntityTypeMapping TypeName="tdthemeModel.Download">
               <MappingFragment StoreEntitySet="Download">
@@ -327,6 +316,17 @@
                 <ScalarProperty Name="ThemeID" ColumnName="ThemeID" />
                 <ScalarProperty Name="UserID" ColumnName="UserID" />
                 <ScalarProperty Name="Id" ColumnName="Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Ratings">
+            <EntityTypeMapping TypeName="tdthemeModel.Rating">
+              <MappingFragment StoreEntitySet="Rating">
+                <ScalarProperty Name="Id" ColumnName="Id" />
+                <ScalarProperty Name="TimeStamp" ColumnName="TimeStamp" />
+                <ScalarProperty Name="Rating1" ColumnName="Rating" />
+                <ScalarProperty Name="UserId" ColumnName="UserId" />
+                <ScalarProperty Name="ThemeId" ColumnName="ThemeId" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>

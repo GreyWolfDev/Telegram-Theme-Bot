@@ -84,7 +84,7 @@ namespace ThemeBot
                             Id = x.Id.ToString(),
                             //InputMessageContent = new InputTextMessageContent { MessageText = x.Description + "text", DisableWebPagePreview = true },
                             Title = x.Name,
-                            ReplyMarkup = new InlineKeyboardMarkup(new[] { new InlineKeyboardButton("Get This Theme") { Url = "https://t.me/tthemebot?start=t" + x.Id }, })
+                            ReplyMarkup = new InlineKeyboardMarkup(new[] { new InlineKeyboardButton("Get Theme") { Url = "https://t.me/tthemebot?start=t" + x.Id }, new InlineKeyboardButton("Rate") {Url = "https://t.me/tthemebot?start=r" + x.Id } })
                         }).ToArray();
 #else
                     x => new InlineQueryResultArticle()
@@ -93,7 +93,7 @@ namespace ThemeBot
                         Id = x.Id.ToString(),
                         InputMessageContent = new InputTextMessageContent { MessageText = $"{x.Name}\n{x.Description}" + (x.ShowOwnerName ? $"\nBy {x.User.Name}" + (x.ShowOwnerUsername ? $" (@{x.User.Username})" : "") : ""), DisableWebPagePreview = true },
                         Title = x.Name,
-                        ReplyMarkup = new InlineKeyboardMarkup(new[] { new InlineKeyboardButton("Get This Theme") { Url = "https://t.me/tthemebot?start=t" + x.Id }, })
+                        ReplyMarkup = new InlineKeyboardMarkup(new[] { new InlineKeyboardButton("Get Theme") { Url = "https://t.me/tthemebot?start=t" + x.Id }, new InlineKeyboardButton("Rate") {Url = "https://t.me/tthemebot?start=r" + x.Id },  })
                     }).ToArray();
 #endif
             offset += 5;
@@ -225,25 +225,40 @@ namespace ThemeBot
                         Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
                         if (args[1] == "no")
                         {
+#if !DEBUG
+                            Client.EditMessageCaptionAsync(q.From.Id, q.Message.MessageId, "Enjoy your theme!");
+#else
                             Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId, "Enjoy your theme!");
+#endif
                         }
                         else
                         {
                             using (var db = new tdthemeEntities())
                             {
-                                var rTheme = db.Themes.FirstOrDefault(x => x.Id.ToString() == args[1]);
+                                var themeId = args[1];
+                                var rTheme = db.Themes.FirstOrDefault(x => x.Id.ToString() == themeId);
                                 var rUser = db.Users.FirstOrDefault(x => x.TelegramID == q.From.Id);
-                                var r = new Rating
+                                var rating = db.Ratings.FirstOrDefault(x => x.UserId == rUser.Id && x.ThemeId == rTheme.Id);
+                                if (rating == null)
                                 {
-                                    ThemeId = rTheme.Id,
-                                    UserId = rUser.Id,
-                                    TimeStamp = DateTime.UtcNow,
-                                    Rating1 = int.Parse(args[2])
-                                };
-                                db.Ratings.Add(r);
+                                    rating = new Rating
+                                    {
+                                        ThemeId = rTheme.Id,
+                                        UserId = rUser.Id,
+                                        TimeStamp = DateTime.UtcNow,
+                                        Rating1 = int.Parse(args[2])
+                                    };
+                                    db.Ratings.Add(rating);
+                                }
+                                else
+                                    rating.Rating1 = int.Parse(args[2]);
                                 db.SaveChanges();
                             }
+#if !DEBUG
+                            Client.EditMessageCaptionAsync(q.From.Id, q.Message.MessageId, "Thank you for rating!");
+#else
                             Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId, "Thank you for rating!");
+#endif
                         }
 
                         break;
@@ -251,9 +266,15 @@ namespace ThemeBot
 
 
             }
+            catch (AggregateException e)
+            {
+                Client.SendTextMessageAsync(129046388, e.InnerExceptions[0].Message);
+            }
             catch (Exception e)
             {
-                //TODO: add logging
+                while (e.InnerException != null)
+                    e = e.InnerException;
+                Client.SendTextMessageAsync(129046388, e.Message + "\n" + e.StackTrace);
             }
         }
 
@@ -312,7 +333,7 @@ namespace ThemeBot
                             {
                                 //check for start parameter
                                 var arg = param[1];
-                                if (arg.StartsWith("t"))
+                                if (arg.StartsWith("t")) //get the theme
                                 {
                                     //they want a theme
                                     arg = arg.Substring(1);
@@ -330,13 +351,34 @@ namespace ThemeBot
                                             db.SaveChanges();
                                         }
                                         Client.SendDocumentAsync(m.Chat.Id, new FileToSend(theme.File_Id), theme.Name);
-                                        Client.SendTextMessageAsync(m.From.Id, "Take a moment to rate this theme:", replyMarkup:
+                                        
+                                    }
+                                    break;
+                                }
+                                if (arg.StartsWith("r")) //rate the theme
+                                {
+                                    arg = arg.Substring(1);
+                                    using (var db = new tdthemeEntities())
+                                    {
+                                        var theme = db.Themes.FirstOrDefault(x => x.Id.ToString() == arg);
+                                        //send rate menu
+#if !DEBUG
+                                        var result = Client.SendPhotoAsync(m.From.Id, theme.Photo_Id, $"How would you rate {theme.Name}?\n(1 - Did not like at all, 5 - it's awesome!)", replyMarkup:
                                             new InlineKeyboardMarkup(new[] {
                                                 Enumerable.Range(1, 5).Select(x => new InlineKeyboardButton(x.ToString(), $"rate|{theme.Id}|{x}")).ToArray(),
                                                 new []
                                             {
                                                 new InlineKeyboardButton("No Thanks", "rate|no")
-                                            }, }));
+                                            }, })).Result;
+#else
+                                        var result = Client.SendTextMessageAsync(m.From.Id, $"How would you rate {theme.Name}?\n(1 - Did not like at all, 5 - it's awesome!)", replyMarkup:
+                                                new InlineKeyboardMarkup(new[] {
+                                                Enumerable.Range(1, 5).Select(x => new InlineKeyboardButton(x.ToString(), $"rate|{theme.Id}|{x}")).ToArray(),
+                                                new []
+                                            {
+                                                new InlineKeyboardButton("No Thanks", "rate|no")
+                                            }, })).Result;
+#endif
                                     }
                                     break;
                                 }

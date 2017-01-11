@@ -7,13 +7,13 @@
       <Diagram DiagramId="b2f12ed920584c548a5020ab6ec1e72f" Name="Diagram1">
         <EntityTypeShape EntityType="tdthemeModel.Theme" Width="1.5" PointX="3" PointY="1" IsExpanded="true" />
         <EntityTypeShape EntityType="tdthemeModel.User" Width="1.5" PointX="0.75" PointY="1.375" IsExpanded="true" />
-        <EntityTypeShape EntityType="tdthemeModel.Rating" Width="1.5" PointX="6.125" PointY="1.5" IsExpanded="true" />
-        <AssociationConnector Association="tdthemeModel.FK_Rating_Theme" ManuallyRouted="false" />
         <AssociationConnector Association="tdthemeModel.FK_Theme_User" ManuallyRouted="false" />
-        <AssociationConnector Association="tdthemeModel.FK_Rating_User" ManuallyRouted="false" />
         <EntityTypeShape EntityType="tdthemeModel.Download" Width="1.5" PointX="5.25" PointY="4.625" />
         <AssociationConnector Association="tdthemeModel.FK_Download_Theme" />
         <AssociationConnector Association="tdthemeModel.FK_Download_User" />
+        <EntityTypeShape EntityType="tdthemeModel.Rating" Width="1.5" PointX="5.25" PointY="0.75" />
+        <AssociationConnector Association="tdthemeModel.FK_Rating_Theme" />
+        <AssociationConnector Association="tdthemeModel.FK_Rating_User" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>
