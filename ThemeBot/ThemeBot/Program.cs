@@ -260,8 +260,8 @@ namespace ThemeBot
                             Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId, "Thank you for rating!");
 #endif
                         }
-
                         break;
+                
                 }
 
 
@@ -525,6 +525,39 @@ namespace ThemeBot
                                 {
                                     Client.SendTextMessageAsync(m.From.Id, msg, replyMarkup: menu);
                                 }
+                            }
+                            break;
+                        case "approval":
+                            if (m.From.Id == 129046388)
+                            {
+                                using (var db = new tdthemeEntities())
+                                {
+                                    var toApprove = db.Themes.Where(x => x.Approved == null);
+                                    foreach (var t in toApprove)
+                                    {
+                                        Client.SendPhotoAsync(129046388, t.Photo_Id,
+                                            $"{t.Id}\n{t.Name}\n{t.Description}");
+                                    }
+                                }
+                            }
+                            break;
+                        case "approve":
+                            try
+                            {
+                                if (m.From.Id == 129046388)
+                                {
+                                    var toApprove = int.Parse(m.Text.Split(' ')[1]);
+                                    using (var db = new tdthemeEntities())
+                                    {
+                                        var t = db.Themes.FirstOrDefault(x => x.Id == toApprove);
+                                        t.Approved = true;
+                                        db.SaveChanges();
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // ignored
                             }
                             break;
 
