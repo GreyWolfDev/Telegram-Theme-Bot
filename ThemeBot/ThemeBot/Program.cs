@@ -58,7 +58,7 @@ namespace ThemeBot
                 lu.Page = 0;
                 using (var db = new tdthemeEntities())
                 {
-                    lu.ResultSet = db.Themes.Where(x => x.Description.ToLower().Contains(search) || x.Name.ToLower().Contains(search) && x.Approved == true).Include(x => x.User).ToList();
+                    lu.ResultSet = db.Themes.Where(x => (x.Description.ToLower().Contains(search) || x.Name.ToLower().Contains(search)) && x.Approved == true).Include(x => x.User).ToList();
                 }
                 if (!lu.ResultSet.Any())
                 {
@@ -292,13 +292,16 @@ namespace ThemeBot
                     db.SaveChanges();
 
                     //theme is awaiting approval, PM Para
-                    Client.SendTextMessageAsync(129046388,
-                        $"New theme awaiting approval.\n{lu.ThemeCreating.Name}: {lu.ThemeCreating.LastUpdated}");
+                    Client.SendPhotoAsync(129046388, lu.ThemeCreating.Photo_Id,
+                                            $"Theme pending approval:\n\n{lu.ThemeCreating.Id}\n{lu.ThemeCreating.Name}\n{lu.ThemeCreating.Description}\n@{lu.ThemeCreating.User.Username ?? lu.ThemeCreating.User.Name}");
+                    Client.SendDocumentAsync(129046388, lu.ThemeCreating.File_Id);
                     Client.SendTextMessageAsync(lu.Id, "Your theme has been uploaded, and is awaiting approval from a moderator");
                 }
                 else
                 {
                     var t = db.Themes.FirstOrDefault(x => x.Id == lu.ThemeUpdating.Id);
+                    var send = t.Approved != true;
+                    t.Approved = t.Approved == false ? null : t.Approved;
                     var th = lu.ThemeUpdating;
                     t.Description = th.Description;
                     t.FileName = th.FileName;
@@ -309,7 +312,16 @@ namespace ThemeBot
                     t.ShowOwnerUsername = th.ShowOwnerUsername;
                     t.LastUpdated = DateTime.UtcNow;
                     db.SaveChanges();
-                    Client.SendTextMessageAsync(lu.Id, "Your theme is ready!");
+                    if (send)
+                    {
+                        Client.SendTextMessageAsync(lu.Id, "Your theme is pending approval.");
+                        Client.SendPhotoAsync(129046388, t.Photo_Id,
+                                            $"Theme pending approval:\n\n{t.Id}\n{t.Name}\n{t.Description}\n@{t.User.Username ?? t.User.Name}");
+                        Client.SendDocumentAsync(129046388, t.File_Id);
+                    }
+                    else
+                        Client.SendTextMessageAsync(lu.Id, "Your theme is ready!");
+                    
                 }
 
                 
@@ -536,7 +548,9 @@ namespace ThemeBot
                                     foreach (var t in toApprove)
                                     {
                                         Client.SendPhotoAsync(129046388, t.Photo_Id,
-                                            $"{t.Id}\n{t.Name}\n{t.Description}");
+                                            $"{t.Id}\n{t.Name}\n{t.Description}\n@{t.User.Username??t.User.Name}");
+                                        Client.SendDocumentAsync(129046388, t.File_Id);
+                                        Thread.Sleep(1000);
                                     }
                                 }
                             }
@@ -552,6 +566,8 @@ namespace ThemeBot
                                         var t = db.Themes.FirstOrDefault(x => x.Id == toApprove);
                                         t.Approved = true;
                                         db.SaveChanges();
+                                        Client.SendTextMessageAsync(t.User.TelegramID,
+                                            $"Your theme {t.Name} has been approved and is now listed!");
                                     }
                                 }
                             }
@@ -560,8 +576,47 @@ namespace ThemeBot
                                 // ignored
                             }
                             break;
-
-
+                        case "disapprove":
+                            try
+                            {
+                                if (m.From.Id == 129046388)
+                                {
+                                    var toApprove = int.Parse(m.Text.Split(' ')[1]);
+                                    using (var db = new tdthemeEntities())
+                                    {
+                                        var t = db.Themes.FirstOrDefault(x => x.Id == toApprove);
+                                        t.Approved = false;
+                                        db.SaveChanges();
+                                        var id = t.User.TelegramID;
+                                        Client.SendTextMessageAsync(id,
+                                            $"Your theme {t.Name} was not approved.\n\n{m.Text.Replace("/disapprove " + toApprove, "")}");
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // ignored
+                            }
+                            break;
+                        case "delete":
+                            try
+                            {
+                                if (m.From.Id == 129046388)
+                                {
+                                    var toApprove = int.Parse(m.Text.Split(' ')[1]);
+                                    using (var db = new tdthemeEntities())
+                                    {
+                                        var t = db.Themes.FirstOrDefault(x => x.Id == toApprove);
+                                        db.Themes.Remove(t);
+                                        db.SaveChanges();
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // ignored
+                            }
+                            break;
                     }
                 }
                 else
