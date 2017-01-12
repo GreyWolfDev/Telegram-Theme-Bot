@@ -49,6 +49,7 @@
           <Property Name="TelegramID" Type="int" Nullable="false" />
           <Property Name="Name" Type="nvarchar(max)" Nullable="false" />
           <Property Name="Username" Type="nvarchar(max)" />
+          <Property Name="AccessFlags" Type="int" />
         </EntityType>
         <Association Name="FK_Download_Theme">
           <End Role="Theme" Type="Self.Theme" Multiplicity="1" />
@@ -171,6 +172,7 @@
           <NavigationProperty Name="Themes" Relationship="Self.FK_Theme_User" FromRole="User" ToRole="Theme" />
           <NavigationProperty Name="Downloads" Relationship="tdthemeModel.FK_Download_User" FromRole="User" ToRole="Download" />
           <NavigationProperty Name="Ratings" Relationship="tdthemeModel.FK_Rating_User" FromRole="User" ToRole="Rating" />
+          <Property Name="AccessFlags" Type="Int32" />
         </EntityType>
         <Association Name="FK_Theme_User">
           <End Role="User" Type="Self.User" Multiplicity="1" />
@@ -308,6 +310,7 @@
           <EntitySetMapping Name="Users">
             <EntityTypeMapping TypeName="tdthemeModel.User">
               <MappingFragment StoreEntitySet="User">
+                <ScalarProperty Name="AccessFlags" ColumnName="AccessFlags" />
                 <ScalarProperty Name="Id" ColumnName="Id" />
                 <ScalarProperty Name="TelegramID" ColumnName="TelegramID" />
                 <ScalarProperty Name="Name" ColumnName="Name" />

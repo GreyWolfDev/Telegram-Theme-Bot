@@ -286,16 +286,30 @@ namespace ThemeBot
                 {
                     //get the database user
                     var thisUser = db.Users.FirstOrDefault(x => x.TelegramID == lu.Id);
-                    lu.ThemeCreating.Approved = null;
+                    if (thisUser.AccessFlags == null)
+                        thisUser.AccessFlags = 0;
+                    var flags = (Access)thisUser.AccessFlags;
+                    if (flags.HasFlag(Access.AutoApprove))
+                        lu.ThemeCreating.Approved = true;
+                    else
+                        lu.ThemeCreating.Approved = null;
                     lu.ThemeCreating.LastUpdated = DateTime.UtcNow;
                     thisUser.Themes.Add(lu.ThemeCreating);
                     db.SaveChanges();
 
-                    //theme is awaiting approval, PM Para
-                    Client.SendPhotoAsync(129046388, lu.ThemeCreating.Photo_Id,
-                                            $"Theme pending approval:\n\n{lu.ThemeCreating.Id}\n{lu.ThemeCreating.Name}\n{lu.ThemeCreating.Description}\n@{lu.ThemeCreating.User.Username ?? lu.ThemeCreating.User.Name}");
-                    Client.SendDocumentAsync(129046388, lu.ThemeCreating.File_Id);
-                    Client.SendTextMessageAsync(lu.Id, "Your theme has been uploaded, and is awaiting approval from a moderator");
+                    if (flags.HasFlag(Access.AutoApprove))
+                    {
+                        Client.SendTextMessageAsync(lu.Id, "Your theme is ready!");
+                    }
+                    else
+                    {
+                        //theme is awaiting approval, PM Para
+                        Client.SendPhotoAsync(129046388, lu.ThemeCreating.Photo_Id,
+                            $"Theme pending approval:\n\n{lu.ThemeCreating.Id}\n{lu.ThemeCreating.Name}\n{lu.ThemeCreating.Description}\n@{lu.ThemeCreating.User.Username ?? lu.ThemeCreating.User.Name}");
+                        Client.SendDocumentAsync(129046388, lu.ThemeCreating.File_Id);
+                        Client.SendTextMessageAsync(lu.Id,
+                            "Your theme has been uploaded, and is awaiting approval from a moderator");
+                    }
                 }
                 else
                 {
@@ -616,6 +630,34 @@ namespace ThemeBot
                             {
                                 // ignored
                             }
+                            break;
+
+                        case "setapproved":
+                            try
+                            {
+                                if (m.From.Id == 129046388)
+                                {
+                                    var toApprove = int.Parse(m.Text.Split(' ')[1]);
+                                    using (var db = new tdthemeEntities())
+                                    {
+                                        var u = db.Users.FirstOrDefault(x => x.TelegramID == toApprove);
+                                        if (u.AccessFlags == null)
+                                            u.AccessFlags = 0;
+                                        var flags = (Access) u.AccessFlags;
+                                        if (flags.HasFlag(Access.AutoApprove)) return;
+                                        flags = flags | Access.AutoApprove;
+                                        db.SaveChanges();
+                                        Client.SendTextMessageAsync(toApprove,
+                                            "You now have auto approval access.  New themes you submit will not require a moderator approval, and will be added instantly.");
+                                        Client.SendTextMessageAsync(m.From.Id, u.Name + " has been set to auto approve");
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // ignored
+                            }
+                            break;
                             break;
                     }
                 }
