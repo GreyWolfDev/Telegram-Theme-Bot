@@ -646,6 +646,7 @@ namespace ThemeBot
                                         var flags = (Access) u.AccessFlags;
                                         if (flags.HasFlag(Access.AutoApprove)) return;
                                         flags = flags | Access.AutoApprove;
+                                        u.AccessFlags = (int) flags;
                                         db.SaveChanges();
                                         Client.SendTextMessageAsync(toApprove,
                                             "You now have auto approval access.  New themes you submit will not require a moderator approval, and will be added instantly.");
