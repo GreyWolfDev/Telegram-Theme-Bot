@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Ionic.Zip;
+using Ionic.Zlib;
 using Microsoft.Win32;
 using Telegram.Bot;
 using Telegram.Bot.Args;
@@ -28,6 +29,7 @@ namespace ThemeBot
         public static List<LUser> LocalUsers = new List<LUser>();
         internal static List<Dictionary<string, string>> CachedThemes = new List<Dictionary<string, string>>();
         internal static List<Theme> LoadedThemes = new List<Theme>();
+        const long ThemeGroup = -191419236;
         internal static string RootDirectory
         {
             get
@@ -304,13 +306,13 @@ namespace ThemeBot
             }
             catch (AggregateException e)
             {
-                Client.SendTextMessageAsync(129046388, e.InnerExceptions[0].Message);
+                Client.SendTextMessageAsync(ThemeGroup, e.InnerExceptions[0].Message);
             }
             catch (Exception e)
             {
                 while (e.InnerException != null)
                     e = e.InnerException;
-                Client.SendTextMessageAsync(129046388, e.Message + "\n" + e.StackTrace);
+                Client.SendTextMessageAsync(ThemeGroup, e.Message + "\n" + e.StackTrace);
             }
         }
 
@@ -343,9 +345,9 @@ namespace ThemeBot
                         else
                         {
                             //theme is awaiting approval, PM Para
-                            Client.SendPhotoAsync(129046388, lu.ThemeCreating.Photo_Id,
+                            Client.SendPhotoAsync(ThemeGroup, lu.ThemeCreating.Photo_Id,
                                 $"Theme pending approval:\n\n{lu.ThemeCreating.Id}\n{lu.ThemeCreating.Name}\n{lu.ThemeCreating.Description}\n@{lu.ThemeCreating.User.Username ?? lu.ThemeCreating.User.Name}");
-                            Client.SendDocumentAsync(129046388, lu.ThemeCreating.File_Id);
+                            Client.SendDocumentAsync(ThemeGroup, lu.ThemeCreating.File_Id);
                             Client.SendTextMessageAsync(lu.Id,
                                 "Your theme has been uploaded, and is awaiting approval from a moderator");
                         }
@@ -368,9 +370,9 @@ namespace ThemeBot
                         if (send)
                         {
                             Client.SendTextMessageAsync(lu.Id, "Your theme is pending approval.");
-                            Client.SendPhotoAsync(129046388, t.Photo_Id,
+                            Client.SendPhotoAsync(ThemeGroup, t.Photo_Id,
                                 $"Theme pending approval:\n\n{t.Id}\n{t.Name}\n{t.Description}\n@{t.User.Username ?? t.User.Name}");
-                            Client.SendDocumentAsync(129046388, t.File_Id);
+                            Client.SendDocumentAsync(ThemeGroup, t.File_Id);
                         }
                         else
                         {
@@ -472,8 +474,8 @@ namespace ThemeBot
                                                         },
                                                     })).Result;
 #else
-                                        var result = Client.SendTextMessageAsync(m.From.Id, $"How would you rate {theme.Name}?\n(1 - Did not like at all, 5 - it's awesome!)", replyMarkup:
-                                                new InlineKeyboardMarkup(new[] {
+                                            var result = Client.SendTextMessageAsync(m.From.Id, $"How would you rate {theme.Name}?\n(1 - Did not like at all, 5 - it's awesome!)", replyMarkup:
+                                                    new InlineKeyboardMarkup(new[] {
                                                 Enumerable.Range(1, 5).Select(x => new InlineKeyboardButton(x.ToString(), $"rate|{theme.Id}|{x}")).ToArray(),
                                                 new []
                                             {
@@ -837,7 +839,7 @@ namespace ThemeBot
                                     else
                                         lu.ThemeUpdating.Description = m.Text;
                                     lu.QuestionAsked = QuestionType.FileUpload;
-                                    Client.SendTextMessageAsync(lu.Id, "Great, now upload the file to me.");
+                                    Client.SendTextMessageAsync(lu.Id, "Great, now upload the file to me.\nNotes: If using *nix, please use 7zip, or be careful about what compression method is used. It also helps to create the zip file with .zip, then rename to .tdesktop-theme - not create it AS tdesktop-theme\nMake sure your color file is named colors.tdesktop-theme, and the image is named 'background.jpg', 'background.png', 'tiled.jpg' or 'tiled.png'.");
                                 }
                                 else
                                 {
@@ -884,6 +886,7 @@ namespace ThemeBot
                             File.Delete(path.Replace(".tdesktop-theme", ".zip"));
                             File.Move(path, path.Replace(".tdesktop-theme", ".zip"));
                             path = path.Replace(".tdesktop-theme", ".zip");
+
                             using (var zip = ZipFile.Read(path))
                             {
                                 foreach (var f in zip)
@@ -1022,13 +1025,25 @@ namespace ThemeBot
             }
             catch (AggregateException e)
             {
-                Client.SendTextMessageAsync(129046388, e.InnerExceptions[0].Message);
+                Client.SendTextMessageAsync(ThemeGroup, e.InnerExceptions[0].Message);
+                Client.ForwardMessageAsync(ThemeGroup, m.Chat.Id, m.MessageId);
             }
             catch (Exception e)
             {
                 while (e.InnerException != null)
                     e = e.InnerException;
-                Client.SendTextMessageAsync(129046388, e.Message + "\n" + e.StackTrace);
+                if (e.Message.Trim().StartsWith("Bad sig"))
+                {
+                    Client.SendTextMessageAsync(m.From.Id,
+                        $"It looks like you are using *nix.  Please try zipping the file with 7zip or something else.\n{e.Message}");
+                }
+                else
+                {
+                    Client.SendTextMessageAsync(m.From.Id, e.Message);
+                    Client.SendTextMessageAsync(ThemeGroup, e.Message + "\n" + e.StackTrace);
+                    Client.ForwardMessageAsync(ThemeGroup, m.Chat.Id, m.MessageId);
+                }
+                
             }
         }
 
@@ -1038,7 +1053,7 @@ namespace ThemeBot
             {
                 var user = db.Users.FirstOrDefault(x => x.TelegramID == u.Id);
                 if (user.AccessFlags == null) return false;
-                var flags = (Access) user.AccessFlags;
+                var flags = (Access)user.AccessFlags;
                 return flags.HasFlag(Access.Moderator);
             }
         }
@@ -1161,7 +1176,7 @@ namespace ThemeBot
                             pend.Approved = false;
                             Client.SendTextMessageAsync(id,
                                 "This theme matches an existing theme.  Simply changing the background, or re-uploading a theme does not count as creating a new theme.");
-                            
+
                         }
 
                     }
