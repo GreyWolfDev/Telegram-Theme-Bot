@@ -85,7 +85,7 @@ namespace ThemeBot
                     lu.Page = 0;
                     using (var db = new tdthemeEntities())
                     {
-                        lu.ResultSet = LoadedThemes.Where(x => (x.Description.ToLower().Contains(search) || x.Name.ToLower().Contains(search))).ToList();
+                        lu.ResultSet = LoadedThemes.ToList().Where(x => (x.Description.ToLower().Contains(search) || x.Name.ToLower().Contains(search))).ToList();
                     }
                     if (!lu.ResultSet.Any())
                     {
@@ -106,7 +106,7 @@ namespace ThemeBot
                         x => new InlineQueryResultCachedPhoto
                         {
                             Description = x.Description,
-                            Caption = $"{x.Name}\n{x.Description}" + (x.ShowOwnerName ? $"\nBy {x.User.Name}" + (x.ShowOwnerUsername ? $" (@{x.User.Username})" : "") : ""),
+                            Caption = $"{x.Name}\n{x.Description}" + (x.ShowOwnerName ? $"\nBy {x.User.Name}" + (x.ShowOwnerUsername ? $" (@{x.User.Username})" : "") : (x.ShowOwnerUsername ? $"\nBy @{x.User.Username}" : "")),
                             FileId = x.Photo_Id,
                             Id = x.Id.ToString(),
                             //InputMessageContent = new InputTextMessageContent { MessageText = x.Description + "text", DisableWebPagePreview = true },
@@ -150,12 +150,12 @@ namespace ThemeBot
                     if (lu.ThemeCreating != null)
                     {
                         lu.ThemeCreating.ShowOwnerName = q.Data.Split('|')[1] == "yes";
-                        if (lu.ThemeCreating.ShowOwnerName & !String.IsNullOrEmpty(q.From.Username))
+                        if (!String.IsNullOrEmpty(q.From.Username))
                         {
                             lu.QuestionAsked = QuestionType.ShowOwnerUsername;
                             Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0, default(CancellationToken));
                             Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
-                                $"Ok, do you also want us to show your username? (@{q.From.Username})", replyMarkup:
+                                $"Ok, do you want us to show your username? (@{q.From.Username})", replyMarkup:
                                     new InlineKeyboardMarkup(new[]
                                     {
                                         new InlineKeyboardButton("Yes", "showuser|yes"),
@@ -174,7 +174,7 @@ namespace ThemeBot
                     else
                     {
                         lu.ThemeUpdating.ShowOwnerName = q.Data.Split('|')[1] == "yes";
-                        if (lu.ThemeUpdating.ShowOwnerName & !String.IsNullOrEmpty(q.From.Username))
+                        if (!String.IsNullOrEmpty(q.From.Username))
                         {
                             lu.QuestionAsked = QuestionType.ShowOwnerUsername;
                             Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0, default(CancellationToken));
@@ -213,6 +213,82 @@ namespace ThemeBot
                 var args = q.Data.Split('|');
                 switch (args[0])
                 {
+                    //approval
+                    case "app":
+                        var app = args[2] == "yes";
+                        using (var db = new tdthemeEntities())
+                        {
+                            var th = db.Themes.Find(int.Parse(args[1]));
+                            th.Approved = app;
+                            if (app)
+                            {
+                                Client.AnswerCallbackQueryAsync(q.Id, "Approved", false, null, 0);
+                                Client.EditMessageCaptionAsync(q.Message.Chat.Id, q.Message.MessageId, $"Approved by: {q.From.FirstName}\n{q.Message.Caption}",
+                                    null);
+                                db.SaveChanges();
+                            }
+                            else
+                            {
+                                //ask for a reason
+                                var menu = new InlineKeyboardMarkup(new[]
+                                {
+                                    new[]
+                                    {
+                                        new InlineKeyboardButton("Image", $"dis|{args[1]}|img"),
+                                        new InlineKeyboardButton("Title / Description", $"dis|{args[1]}|text"),
+                                    },
+                                    new[]
+                                    {
+                                        new InlineKeyboardButton("Image and Title", $"dis|{args[1]}|imgtext"),
+                                        new InlineKeyboardButton("Other", $"dis|{args[1]}|other"),
+                                    }
+                                });
+                                Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
+                                Client.EditMessageCaptionAsync(q.Message.Chat.Id, q.Message.MessageId, $"{q.Message.Caption}\n\nPlease choose why it is disapproved:",
+                                    menu);
+                            }
+                        }
+
+                        break;
+                    case "dis":
+                        using (var db = new tdthemeEntities())
+                        {
+                            var th = db.Themes.Find(int.Parse(args[1]));
+                            string msg = "Your theme was not approved\n";
+                            var send = true;
+                            switch (args[2])
+                            {
+                                case "img":
+                                    msg += "Please use the official Telegram theme preview screenshot\n";
+                                    break;
+                                case "text":
+                                    msg += "Please update the Name / Description with something more descriptive / meaningful\n";
+                                    break;
+                                case "imgtext":
+                                    msg += "Please use the official Telegram theme preview screenshot\n";
+                                    msg += "Please update the Name / Description with something more descriptive / meaningful\n";
+                                    break;
+                                case "other":
+                                    Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
+                                    Client.EditMessageCaptionAsync(q.Message.Chat.Id, q.Message.MessageId, $"{q.Message.Caption}\n\nPlease use the manual disapproval command",
+                                        null);
+                                    send = false;
+                                    break;
+                            }
+
+                            if (send)
+                            {
+                                th.Approved = false;
+                                db.SaveChanges();
+                                msg += "Use /edittheme to update your submission";
+                                Client.SendTextMessageAsync(th.User.TelegramID, msg);
+                                Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
+                                Client.EditMessageCaptionAsync(q.Message.Chat.Id, q.Message.MessageId, $"{q.Message.Caption}\n\nMessage sent to user",
+                                        null);
+                            }
+                        }
+
+                        break;
                     case "update":
                         using (var db = new tdthemeEntities())
                         {
@@ -345,9 +421,8 @@ namespace ThemeBot
                         else
                         {
                             //theme is awaiting approval, PM Para
-                            Client.SendPhotoAsync(ThemeGroup, lu.ThemeCreating.Photo_Id,
-                                $"Theme pending approval:\n\n{lu.ThemeCreating.Id}\n{lu.ThemeCreating.Name}\n{lu.ThemeCreating.Description}\n@{lu.ThemeCreating.User.Username ?? lu.ThemeCreating.User.Name}");
-                            Client.SendDocumentAsync(ThemeGroup, lu.ThemeCreating.File_Id);
+                            RequestApproval(lu.ThemeCreating.Id);
+
                             Client.SendTextMessageAsync(lu.Id,
                                 "Your theme has been uploaded, and is awaiting approval from a moderator");
                         }
@@ -370,9 +445,7 @@ namespace ThemeBot
                         if (send)
                         {
                             Client.SendTextMessageAsync(lu.Id, "Your theme is pending approval.");
-                            Client.SendPhotoAsync(ThemeGroup, t.Photo_Id,
-                                $"Theme pending approval:\n\n{t.Id}\n{t.Name}\n{t.Description}\n@{t.User.Username ?? t.User.Name}");
-                            Client.SendDocumentAsync(ThemeGroup, t.File_Id);
+                            RequestApproval(t.Id);
                         }
                         else
                         {
@@ -397,6 +470,28 @@ namespace ThemeBot
                     e = e.InnerException;
                 Client.SendTextMessageAsync(129046388, e.Message + "\n" + e.StackTrace);
             }
+        }
+
+        private static void RequestApproval(int id)
+        {
+            using (var db = new tdthemeEntities())
+            {
+                var t = db.Themes.FirstOrDefault(x => x.Id == id);
+                //create menu
+                var menu = new InlineKeyboardMarkup(new[]
+                {
+                    new[]
+                    {
+                        new InlineKeyboardButton("Approve", $"app|{id}|yes"),
+                        new InlineKeyboardButton("Disapprove", $"app|{id}|no"),
+                    }
+                });
+                Client.SendPhotoAsync(ThemeGroup, t.Photo_Id,
+                                    $"Theme pending approval:\n\n{t.Id}\n{t.Name}\n{t.Description}\n{(t.User.Username == null ? t.User.Name : "@" + t.User.Username)}", replyMarkup: menu);
+                Client.SendDocumentAsync(ThemeGroup, t.File_Id);
+            }
+
+
         }
 
         private static async void ClientOnOnMessage(object sender, MessageEventArgs messageEventArgs)
@@ -635,9 +730,7 @@ namespace ThemeBot
                                             var toApprove = db.Themes.Where(x => x.Approved == null).Take(5).ToList();
                                             foreach (var t in toApprove)
                                             {
-                                                Client.SendPhotoAsync(m.From.Id, t.Photo_Id,
-                                                    $"{t.Id}\n{t.Name}\n{t.Description}\n@{t.User.Username ?? t.User.Name}");
-                                                Client.SendDocumentAsync(m.From.Id, t.File_Id);
+                                                RequestApproval(t.Id);
                                                 Thread.Sleep(1000);
                                             }
                                         }
@@ -1043,7 +1136,7 @@ namespace ThemeBot
                     Client.SendTextMessageAsync(ThemeGroup, e.Message + "\n" + e.StackTrace);
                     Client.ForwardMessageAsync(ThemeGroup, m.Chat.Id, m.MessageId);
                 }
-                
+
             }
         }
 
