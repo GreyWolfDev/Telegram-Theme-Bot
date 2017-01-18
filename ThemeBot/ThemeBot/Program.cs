@@ -322,6 +322,10 @@ namespace ThemeBot
                             using (var db = new tdthemeEntities())
                             {
                                 t = db.Themes.Find(int.Parse(args[1]));
+                                foreach (var r in t.Ratings)
+                                    db.Ratings.Remove(r);
+                                foreach (var d in t.Downloads)
+                                    db.Downloads.Remove(d);
                                 db.Themes.Remove(t);
                                 db.SaveChanges();
                                 Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
@@ -591,7 +595,7 @@ namespace ThemeBot
                                         "/newtheme - Upload a new theme to the catalog\n" +
                                         "/edittheme - Edit one of your themes\n" +
                                         "/deletetheme - Delete a theme\n" +
-                                        //"/cancel - Cancel the current operation\n\n" +
+                                        "/cancel - Cancel the current operation\n\n" +
                                         "You can also search for themes inline");
                                 }
                                 break;
@@ -602,7 +606,7 @@ namespace ThemeBot
                                                                        "/newtheme - Upload a new theme to the catalog\n" +
                                                                        "/edittheme - Edit one of your themes\n" +
                                                                        "/deletetheme - Delete a theme\n" +
-                                                                       //"/cancel - Cancel the current operation\n\n" +
+                                                                       "/cancel - Cancel the current operation\n\n" +
                                                                        "You can also search for themes inline");
                                 break;
                             case "newtheme":
@@ -616,6 +620,9 @@ namespace ThemeBot
                                 }
                                 break;
                             case "edittheme":
+                                lu = GetLocalUser(m.From.Id);
+                                LocalUsers.Remove(lu);
+                                lu = null;
                                 if (m.Chat.Type != ChatType.Private)
                                 {
                                     Client.SendTextMessageAsync(m.Chat.Id, "Please edit your themes in PM");
@@ -670,6 +677,14 @@ namespace ThemeBot
                                 }
                                 break;
                             case "cancel":
+                                if (m.Chat.Type == ChatType.Private)
+                                {
+                                    lu = GetLocalUser(m.From.Id);
+                                    LocalUsers.Remove(lu);
+                                    lu = null;
+                                    Client.SendTextMessageAsync(m.From.Id, "Operation cancelled");
+                                }
+                                
                                 break;
                             case "keep":
                                 lu = GetLocalUser(m.From.Id);
@@ -898,7 +913,7 @@ namespace ThemeBot
                                 break;
                         }
                     }
-                    else
+                    else if (m.Chat.Type == ChatType.Private)
                     {
                         //plain text.  Are they answering a question, or searching?
                         var lu = GetLocalUser(m.From.Id);
@@ -913,7 +928,7 @@ namespace ThemeBot
                                         lu.ThemeUpdating.Name = m.Text;
                                     lu.QuestionAsked = QuestionType.Description;
                                     Client.SendTextMessageAsync(lu.Id,
-                                        "Alright, now enter a short description of your theme");
+                                        "Alright, now enter a short description of your theme.  It helps to use keywords like \"dark\", \"blue\", etc.  This will help people locate your theme easier.\nAlso, if your theme is a modification of another theme, please add \"Based on <theme name>\"");
                                 }
                                 else
                                 {
