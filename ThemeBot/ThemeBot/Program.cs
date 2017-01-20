@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Data.Entity.Validation;
 using System.IO;
 using System.Linq;
 using System.Net.Mail;
@@ -218,7 +219,13 @@ namespace ThemeBot
                         var app = args[2] == "yes";
                         using (var db = new tdthemeEntities())
                         {
-                            var th = db.Themes.Find(int.Parse(args[1]));
+                            var th = db.Themes.FirstOrDefault(x => x.Id == int.Parse(args[1]));
+                            if (th == null)
+                            {
+                                Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
+                                Client.EditMessageCaptionAsync(q.Message.Chat.Id, q.Message.MessageId, $"This theme appears to have been removed already.");
+                                return;
+                            }
                             th.Approved = app;
                             if (app)
                             {
@@ -253,7 +260,13 @@ namespace ThemeBot
                     case "dis":
                         using (var db = new tdthemeEntities())
                         {
-                            var th = db.Themes.Find(int.Parse(args[1]));
+                            var th = db.Themes.FirstOrDefault(x => x.Id == int.Parse(args[1]));
+                            if (th == null)
+                            {
+                                Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
+                                Client.EditMessageCaptionAsync(q.Message.Chat.Id, q.Message.MessageId, $"This theme appears to have been removed already.");
+                                return;
+                            }
                             string msg = "Your theme was not approved\n";
                             var send = true;
                             switch (args[2])
@@ -321,16 +334,24 @@ namespace ThemeBot
                         {
                             using (var db = new tdthemeEntities())
                             {
-                                t = db.Themes.Find(int.Parse(args[1]));
-                                foreach (var r in t.Ratings)
-                                    db.Ratings.Remove(r);
-                                foreach (var d in t.Downloads)
-                                    db.Downloads.Remove(d);
-                                db.Themes.Remove(t);
-                                db.SaveChanges();
-                                Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
-                                Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
-                                    $"{t.Name} has been deleted.");
+                                try
+                                {
+                                    t = db.Themes.Find(int.Parse(args[1]));
+                                    foreach (var r in t.Ratings.ToList())
+                                        db.Ratings.Remove(r);
+                                    foreach (var d in t.Downloads.ToList())
+                                        db.Downloads.Remove(d);
+                                    db.Themes.Remove(t);
+                                    db.SaveChanges();
+                                    Client.AnswerCallbackQueryAsync(q.Id, null, false, null, 0);
+                                    Client.EditMessageTextAsync(q.From.Id, q.Message.MessageId,
+                                        $"{t.Name} has been deleted.");
+                                }
+                                catch (Exception e)
+                                {
+                                    Client.SendTextMessageAsync(q.From.Id,
+                                        $"Unable to delete theme: " + e.Message + "\nPlease try again");
+                                }
                             }
                         }
                         else
@@ -541,8 +562,12 @@ namespace ThemeBot
                                                 });
                                                 db.SaveChanges();
                                             }
-                                            Client.SendDocumentAsync(m.Chat.Id, new FileToSend(theme.File_Id),
-                                                theme.Name);
+                                            if (theme != null)
+                                                Client.SendDocumentAsync(m.Chat.Id, new FileToSend(theme.File_Id),
+                                                    theme.Name);
+                                            else
+                                                Client.SendTextMessageAsync(m.From.Id,
+                                                    "This theme does not appear to exist anymore.");
 
                                         }
                                         break;
@@ -771,6 +796,11 @@ namespace ThemeBot
                                         using (var db = new tdthemeEntities())
                                         {
                                             var t = db.Themes.FirstOrDefault(x => x.Id == toApprove);
+                                            if (t == null)
+                                            {
+                                                Client.SendTextMessageAsync(m.Chat.Id, $"This theme appears to have been removed already.", replyToMessageId: m.MessageId);
+                                                return;
+                                            }
                                             t.Approved = true;
                                             db.SaveChanges();
                                             CacheThemes();
@@ -841,6 +871,27 @@ namespace ThemeBot
                                     while (e.InnerException != null)
                                         e = e.InnerException;
                                     Client.SendTextMessageAsync(m.From.Id, e.Message + "\n" + e.StackTrace);
+                                }
+                                break;
+                            case "stats":
+                                try
+                                {
+                                    if (m.From.Id == 129046388)
+                                    {
+                                        using (var db = new tdthemeEntities())
+                                        {
+                                            var themes = db.Themes.Count(x => x.Approved == true);
+                                            var ratings = db.Ratings.Count();
+                                            var downloads = db.Downloads.Count();
+                                            var users = db.Users.Count();
+                                            Client.SendTextMessageAsync(m.Chat.Id,
+                                                $"Themes: {themes}\nDownloads: {downloads}\nRatings: {ratings}\nUsers: {users}");
+                                        }
+                                    }
+                                }
+                                catch
+                                {
+                                    // ignored
                                 }
                                 break;
                             case "setmod":
